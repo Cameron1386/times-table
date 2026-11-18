@@ -356,7 +356,7 @@ const keysEl = $('keys');
 
 /* ---------- game ---------- */
 let deck = [], i = 0, right = 0, missed = [], streak = 0, best = 0;
-let entry = '', mode = 'idle', timer = 0;
+let entry = '', mode = 'idle', timer = 0, tries = 0;
 
 function shuffle(a) {
   for (let k = a.length - 1; k > 0; k--) {
@@ -405,8 +405,7 @@ function ask() {
   const q = $('q');
   q.textContent = a + ' × ' + b;
   q.classList.remove('in'); void q.offsetWidth; q.classList.add('in');
-  entry = ''; paintEntry(); paintStats(); paintTrack(i);
-  $('ok').textContent = 'Check ✓';
+  entry = ''; tries = 0; paintEntry(); paintStats(); paintTrack(i);
   mode = 'answer';
   say(pick(NUDGE));
 }
@@ -423,7 +422,6 @@ function bump(id) {
   el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
 }
 function check() {
-  if (mode === 'review') { next(); return; }
   if (mode !== 'answer') return;
   const box = $('answer');
   if (entry === '') {
@@ -433,28 +431,33 @@ function check() {
   }
   const [a, b] = deck[i];
   if (Number(entry) === a * b) {
-    right++; streak++; best = Math.max(best, streak);
+    const firstTry = tries === 0;
+    if (firstTry) { right++; streak++; best = Math.max(best, streak); }
     box.className = 'answer right';
-    let msg = pick(PRAISE);
-    if (streak === 3) msg = '3 in a row! 🔥';
+    let msg = firstTry ? pick(PRAISE) : 'You got it! Well done for trying again!';
+    if (!firstTry) {}
+    else if (streak === 3) msg = '3 in a row! 🔥';
     else if (streak === 5) msg = '5 in a row! On fire! 🔥';
     else if (streak > 0 && streak % 10 === 0) msg = streak + ' in a row! Unstoppable! 🚀';
     say(msg, 'happy', 'right');
     sfx('right');
     const r = box.getBoundingClientRect();
     burst(r.left + r.width / 2, r.top + r.height / 2, streak >= 3 ? 40 : 24, 12);
-    bump('score'); if (streak > 1) bump('streak');
+    if (firstTry) { bump('score'); if (streak > 1) bump('streak'); }
     paintStats(); paintTrack(i + 1);
     mode = 'locked';
     timer = setTimeout(next, 1000);
   } else {
-    missed.push([a, b]); streak = 0;
-    box.className = 'answer wrong';
-    say('Nice try! ' + a + ' × ' + b + ' = ' + (a * b), 'oops', 'wrong');
+    if (tries === 0) { missed.push([a, b]); streak = 0; }
+    tries++;
+    box.className = 'answer wrong shake';
+    say(tries >= 2
+      ? 'Hint: ' + a + ' × ' + b + ' = ' + (a * b) + '. Type it in!'
+      : 'Not quite — try again!', 'oops', 'wrong');
     sfx('wrong');
-    paintStats(); paintTrack(i + 1);
-    $('ok').textContent = i + 1 < deck.length ? 'Next ➜' : 'Finish 🏁';
-    mode = 'review';
+    paintStats();
+    mode = 'locked';
+    timer = setTimeout(() => { entry = ''; paintEntry(); mode = 'answer'; }, 700);
   }
 }
 function next() {
