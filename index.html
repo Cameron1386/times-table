@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Times table practice</title>
+<meta name="description" content="Pick your times tables and practice them with a quick quiz.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f7fbff; --grid:#d6e6f5; --ink:#1d2b4a; --soft:#5a6a88;
+  --pencil:#ffc93c; --pencil-ink:#3b2a00; --right:#1f9d55; --wrong:#d64545;
+  --chip:#ffffff; --chip-border:#b9cde3;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14203a; --grid:#1f2f52; --ink:#eaf1ff; --soft:#a3b3d1;
+    --pencil:#ffc93c; --pencil-ink:#3b2a00; --right:#4fd18b; --wrong:#ff7a7a;
+    --chip:#1a2848; --chip-border:#34497a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14203a; --grid:#1f2f52; --ink:#eaf1ff; --soft:#a3b3d1;
+  --pencil:#ffc93c; --pencil-ink:#3b2a00; --right:#4fd18b; --wrong:#ff7a7a;
+  --chip:#1a2848; --chip-border:#34497a;
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:"Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  color:var(--ink);
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:28px 28px;
+}
+main{max-width:34rem;margin:0 auto;padding:2rem 1.25rem 3rem}
+h1{font-size:2.2rem;line-height:1.1;margin:0 0 .25rem;font-weight:800}
+p.lead{margin:0 0 1.5rem;color:var(--soft);font-size:1.1rem}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem}
+.chip{
+  font:inherit;font-size:1.4rem;font-weight:700;
+  padding:.7rem 0;border-radius:14px;
+  background:var(--chip);color:var(--ink);
+  border:2px solid var(--chip-border);cursor:pointer;
+}
+.chip[aria-pressed="true"]{background:var(--pencil);color:var(--pencil-ink);border-color:var(--pencil)}
+.row{display:flex;gap:.75rem;margin:1rem 0 1.5rem;flex-wrap:wrap}
+.link{font:inherit;font-size:1rem;background:none;border:0;color:var(--soft);text-decoration:underline;cursor:pointer;padding:.25rem}
+.go{
+  font:inherit;font-size:1.3rem;font-weight:800;width:100%;
+  padding:.85rem;border-radius:16px;border:0;cursor:pointer;
+  background:var(--ink);color:var(--paper);
+}
+.go:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:3px solid var(--pencil);outline-offset:3px}
+.hint{color:var(--soft);font-size:1rem;margin:.6rem 0 0;text-align:center;min-height:1.5em}
+
+.progress{display:flex;justify-content:space-between;color:var(--soft);font-size:1.05rem;margin-bottom:1rem}
+.question{
+  font-size:clamp(3.2rem,16vw,5.5rem);font-weight:800;line-height:1;
+  text-align:center;margin:1.5rem 0 1rem;letter-spacing:.02em;
+}
+form{display:flex;gap:.6rem}
+input{
+  flex:1;min-width:0;font:inherit;font-size:2rem;font-weight:700;text-align:center;
+  padding:.4rem;border-radius:14px;border:3px solid var(--chip-border);
+  background:var(--chip);color:var(--ink);
+}
+form .go{width:auto;padding:.6rem 1.4rem}
+.feedback{text-align:center;font-size:1.4rem;font-weight:700;min-height:2.2em;margin:1rem 0}
+.feedback.right{color:var(--right)}
+.feedback.wrong{color:var(--wrong)}
+.done{text-align:center}
+.big{font-size:4rem;font-weight:800;line-height:1;margin:1rem 0 .25rem}
+.missed{list-style:none;padding:0;margin:1rem 0;display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center}
+.missed li{background:var(--chip);border:2px solid var(--chip-border);border-radius:10px;padding:.2rem .7rem;font-size:1.15rem}
+.stack{display:grid;gap:.6rem;margin-top:1.25rem}
+.ghost{background:transparent;color:var(--ink);border:2px solid var(--ink)}
+[hidden]{display:none !important}
+</style>
+</head>
+<body>
+<main>
+  <section id="setup">
+    <h1>Times tables</h1>
+    <p class="lead">Pick the tables you want to practice.</p>
+    <div class="chips" id="chips"></div>
+    <div class="row">
+      <button class="link" id="all" type="button">Select all</button>
+      <button class="link" id="none" type="button">Clear</button>
+    </div>
+    <button class="go" id="start" type="button" disabled>Start</button>
+    <p class="hint" id="count"></p>
+  </section>
+
+  <section id="quiz" hidden>
+    <div class="progress"><span id="prog"></span><span id="score"></span></div>
+    <div class="question" id="q" aria-live="polite"></div>
+    <form id="form" autocomplete="off">
+      <input id="answer" type="number" inputmode="numeric" aria-label="Your answer" required>
+      <button class="go" id="submit" type="submit">Check</button>
+    </form>
+    <div class="feedback" id="fb" aria-live="polite"></div>
+    <div style="text-align:center"><button class="link" id="quit" type="button">Stop and choose tables</button></div>
+  </section>
+
+  <section id="end" class="done" hidden>
+    <h1>All done</h1>
+    <div class="big" id="final"></div>
+    <p class="lead" id="finalText"></p>
+    <div id="missedWrap">
+      <p style="margin:0">Ones to practice:</p>
+      <ul class="missed" id="missed"></ul>
+    </div>
+    <div class="stack">
+      <button class="go" id="retry" type="button">Practice the ones I missed</button>
+      <button class="go ghost" id="again" type="button">Same tables again</button>
+      <button class="link" id="back" type="button">Choose different tables</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const MAX = 12;
+const chosen = new Set();
+const $ = id => document.getElementById(id);
+const chipsEl = $('chips');
+
+for (let n = 1; n <= MAX; n++) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'chip'; b.textContent = n;
+  b.setAttribute('aria-pressed', 'false');
+  b.setAttribute('aria-label', n + ' times table');
+  b.onclick = () => { chosen.has(n) ? chosen.delete(n) : chosen.add(n); refresh(); };
+  chipsEl.appendChild(b);
+}
+function refresh() {
+  [...chipsEl.children].forEach((b, i) => b.setAttribute('aria-pressed', chosen.has(i + 1)));
+  $('start').disabled = chosen.size === 0;
+  $('count').textContent = chosen.size
+    ? (chosen.size * MAX) + ' questions'
+    : 'Choose at least one table';
+}
+$('all').onclick = () => { for (let n = 1; n <= MAX; n++) chosen.add(n); refresh(); };
+$('none').onclick = () => { chosen.clear(); refresh(); };
+refresh();
+
+let deck = [], i = 0, right = 0, missed = [], waiting = false;
+
+function shuffle(a) {
+  for (let k = a.length - 1; k > 0; k--) {
+    const j = Math.floor(Math.random() * (k + 1));
+    [a[k], a[j]] = [a[j], a[k]];
+  }
+  return a;
+}
+function show(id) {
+  ['setup', 'quiz', 'end'].forEach(s => $(s).hidden = s !== id);
+}
+function begin(questions) {
+  deck = shuffle(questions.slice());
+  i = 0; right = 0; missed = [];
+  show('quiz'); ask();
+}
+function fullDeck() {
+  const qs = [];
+  [...chosen].sort((a, b) => a - b).forEach(a => {
+    for (let b = 1; b <= MAX; b++) qs.push([a, b]);
+  });
+  return qs;
+}
+function ask() {
+  const [a, b] = deck[i];
+  $('q').textContent = a + ' × ' + b;
+  $('prog').textContent = 'Question ' + (i + 1) + ' of ' + deck.length;
+  $('score').textContent = right + ' right';
+  $('fb').textContent = ''; $('fb').className = 'feedback';
+  $('answer').value = ''; $('answer').disabled = false;
+  $('submit').textContent = 'Check';
+  waiting = false;
+  $('answer').focus();
+}
+
+$('form').addEventListener('submit', e => {
+  e.preventDefault();
+  if (waiting) { next(); return; }
+  const val = $('answer').value.trim();
+  if (val === '') return;
+  const [a, b] = deck[i];
+  const fb = $('fb');
+  if (Number(val) === a * b) {
+    right++;
+    fb.textContent = 'Correct!';
+    fb.className = 'feedback right';
+  } else {
+    missed.push([a, b]);
+    fb.textContent = 'Not quite — ' + a + ' × ' + b + ' = ' + (a * b);
+    fb.className = 'feedback wrong';
+  }
+  $('score').textContent = right + ' right';
+  $('answer').disabled = true;
+  $('submit').textContent = i + 1 < deck.length ? 'Next' : 'See results';
+  waiting = true;
+  $('submit').focus();
+});
+
+function next() {
+  i++;
+  if (i < deck.length) ask(); else finish();
+}
+function finish() {
+  show('end');
+  $('final').textContent = right + ' / ' + deck.length;
+  $('finalText').textContent = missed.length === 0
+    ? 'Every answer right.'
+    : 'You got ' + right + ' right and ' + missed.length + ' to work on.';
+  $('missedWrap').hidden = missed.length === 0;
+  $('retry').hidden = missed.length === 0;
+  $('missed').innerHTML = '';
+  missed.forEach(([a, b]) => {
+    const li = document.createElement('li');
+    li.textContent = a + ' × ' + b + ' = ' + (a * b);
+    $('missed').appendChild(li);
+  });
+}
+
+$('start').onclick = () => begin(fullDeck());
+$('again').onclick = () => begin(fullDeck());
+$('retry').onclick = () => begin(missed);
+$('back').onclick = () => show('setup');
+$('quit').onclick = () => show('setup');
+</script>
+</body>
+</html>
