@@ -114,9 +114,53 @@ h1{
 .badge{background:#fff;border-radius:999px;padding:.15rem .8rem;font-size:1.1rem;font-weight:800;box-shadow:0 3px 0 rgba(29,43,74,.2)}
 .badge.pop{animation:pop .35s ease}
 @keyframes pop{50%{transform:scale(1.25)}}
-.track{position:relative;height:1.1rem;background:rgba(255,255,255,.55);border-radius:999px;margin:0 .9rem 1.1rem}
-.fill{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#ffd23f,#ff8a3d);transition:width .4s ease}
-.rocket{position:absolute;top:50%;left:0;font-size:1.7rem;transform:translate(-50%,-50%) rotate(45deg);transition:left .4s ease}
+/* space track: the rocket flies to the moon */
+.track{
+  position:relative;height:3.4rem;border-radius:999px;margin:0 0 1.1rem;
+  background:linear-gradient(90deg,#141a4a 0%,#2b1f6b 60%,#4a2a8a 100%);
+  border:3px solid #fff;box-shadow:0 5px 0 rgba(29,43,74,.3);
+}
+.track::before,.track::after{
+  content:"";position:absolute;inset:0;border-radius:999px;
+  background-image:
+    radial-gradient(circle,#fff 0 1.5px,transparent 2px),
+    radial-gradient(circle,#fff 0 1px,transparent 1.5px),
+    radial-gradient(circle,#ffe9a8 0 1.5px,transparent 2px);
+  background-size:53px 31px,37px 23px,71px 41px;
+  background-position:7px 5px,19px 14px,33px 9px;
+  animation:twinkle 2.4s ease-in-out infinite;
+}
+.track::after{background-position:29px 17px,5px 3px,51px 27px;animation-delay:-1.2s}
+@keyframes twinkle{0%,100%{opacity:.9}50%{opacity:.25}}
+.lane{position:absolute;left:1.6rem;right:4.4rem;top:0;bottom:0;z-index:1}
+.lane::before{
+  content:"";position:absolute;left:0;right:0;top:50%;height:0;
+  border-top:3px dotted rgba(255,255,255,.35);transform:translateY(-50%);
+}
+.fill{
+  position:absolute;left:0;top:50%;height:8px;width:0;margin-top:-4px;border-radius:999px;
+  background:linear-gradient(90deg,rgba(255,138,61,0),#ff8a3d 40%,#ffd23f);
+  box-shadow:0 0 10px 2px rgba(255,190,80,.7);transition:width .5s ease;
+}
+.rocket{position:absolute;top:50%;left:0;font-size:1.9rem;line-height:1;transform:translate(-50%,-50%);transition:left .5s ease,top .5s ease;z-index:2}
+.rocket span{display:inline-block;transform:rotate(45deg);animation:thrust .5s ease-in-out infinite alternate;transition:transform .5s ease}
+@keyframes thrust{from{translate:0 -2px}to{translate:0 2px}}
+.moon{
+  position:absolute;right:.45rem;top:50%;width:2.9rem;height:2.9rem;margin-top:-1.45rem;border-radius:50%;z-index:1;
+  background:
+    radial-gradient(circle at 30% 38%,#d8cf9c 0 13%,transparent 14%),
+    radial-gradient(circle at 66% 62%,#d8cf9c 0 17%,transparent 18%),
+    radial-gradient(circle at 62% 24%,#d8cf9c 0 9%,transparent 10%),
+    radial-gradient(circle at 30% 72%,#d8cf9c 0 7%,transparent 8%),
+    radial-gradient(circle at 35% 30%,#fffdf0,#f1e4a0);
+  box-shadow:0 0 14px 5px rgba(255,244,180,.75),inset -5px -5px 0 rgba(160,140,60,.25);
+  animation:moonGlow 2.2s ease-in-out infinite;
+}
+@keyframes moonGlow{50%{box-shadow:0 0 22px 9px rgba(255,244,180,.95),inset -5px -5px 0 rgba(160,140,60,.25)}}
+.track.landed .rocket{left:calc(100% + 2.2rem);top:18%}
+.track.landed .rocket span{transform:rotate(-45deg) scale(.75);animation:none}
+.track.landed .moon{animation:moonParty .5s ease 3}
+@keyframes moonParty{50%{transform:scale(1.25) rotate(12deg);box-shadow:0 0 30px 14px rgba(255,244,180,1)}}
 .question{
   font-size:clamp(3rem,17vw,4.6rem);font-weight:800;line-height:1;text-align:center;margin:.1rem 0 .7rem;
 }
@@ -204,7 +248,10 @@ h1{
       <span class="badge" id="streak"></span>
       <span class="badge" id="score"></span>
     </div>
-    <div class="track" aria-hidden="true"><div class="fill" id="fill"></div><span class="rocket" id="rocket">🚀</span></div>
+    <div class="track" id="track" aria-hidden="true">
+      <div class="lane"><div class="fill" id="fill"></div><span class="rocket" id="rocket"><span>🚀</span></span></div>
+      <div class="moon"></div>
+    </div>
     <div class="card">
       <div class="question" id="q" aria-live="polite"></div>
       <output class="answer empty" id="answer" aria-label="Your answer">?</output>
@@ -394,6 +441,7 @@ function paintTrack(done) {
   const pct = done / deck.length * 100;
   $('fill').style.width = pct + '%';
   $('rocket').style.left = pct + '%';
+  $('track').classList.toggle('landed', done >= deck.length);
 }
 function paintEntry() {
   const el = $('answer');
@@ -485,7 +533,7 @@ function finish() {
     li.textContent = a + ' × ' + b + ' = ' + (a * b);
     $('missed').appendChild(li);
   });
-  say(stars === 3 ? 'PERFECT! You are a times table star!' : stars === 2 ? 'Great job! So close to perfect!' : 'Good practice! Let\'s try again!', 'happy');
+  say(stars === 3 ? 'PERFECT! You flew all the way to the moon! 🌕' : stars === 2 ? 'You reached the moon! Great job! 🌕' : 'You reached the moon! Let\'s fly again! 🌕', 'happy');
   sfx('win');
   burst(innerWidth * .25, innerHeight * .6, 50 * stars, 18);
   burst(innerWidth * .75, innerHeight * .6, 50 * stars, 18);
